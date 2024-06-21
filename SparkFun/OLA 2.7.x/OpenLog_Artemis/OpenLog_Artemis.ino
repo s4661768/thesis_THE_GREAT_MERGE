@@ -548,25 +548,25 @@ void setup() {
 
   if (settings.enableTerminalOutput == false && settings.logData == true) SerialPrintln(F("Logging to microSD card with no terminal output"));
 
-  if (detectQwiicDevices() == true) //159 - 865ms but varies based on number of devices attached
-  {
-    beginQwiicDevices(); //Begin() each device in the node list
-    loadDeviceSettingsFromFile(); //Load config settings into node list
-    configureQwiicDevices(); //Apply config settings to each device in the node list
-    int deviceCount = printOnlineDevice(); // Pretty-print the online devices
+  // if (detectQwiicDevices() == true) //159 - 865ms but varies based on number of devices attached
+  // {
+  //   beginQwiicDevices(); //Begin() each device in the node list
+  //   loadDeviceSettingsFromFile(); //Load config settings into node list
+  //   configureQwiicDevices(); //Apply config settings to each device in the node list
+  //   int deviceCount = printOnlineDevice(); // Pretty-print the online devices
 
-    if ((deviceCount == 0) && (settings.resetOnZeroDeviceCount == true)) // Check for resetOnZeroDeviceCount
-    {
-      if ((Serial.available()) || ((settings.useTxRxPinsForTerminal == true) && (Serial1.available())))
-        menuMain(); //Present user menu - in case the user wants to disable resetOnZeroDeviceCount
-      else
-      {
-        SerialPrintln(F("*** Zero Qwiic Devices Found! Resetting... ***"));
-        SerialFlush();
-        resetArtemis(); //Thank you and goodnight...
-      }
-    }
-  }
+  //   if ((deviceCount == 0) && (settings.resetOnZeroDeviceCount == true)) // Check for resetOnZeroDeviceCount
+  //   {
+  //     if ((Serial.available()) || ((settings.useTxRxPinsForTerminal == true) && (Serial1.available())))
+  //       menuMain(); //Present user menu - in case the user wants to disable resetOnZeroDeviceCount
+  //     else
+  //     {
+  //       SerialPrintln(F("*** Zero Qwiic Devices Found! Resetting... ***"));
+  //       SerialFlush();
+  //       resetArtemis(); //Thank you and goodnight...
+  //     }
+  //   }
+  // }
   else
     SerialPrintln(F("No Qwiic devices detected"));
 

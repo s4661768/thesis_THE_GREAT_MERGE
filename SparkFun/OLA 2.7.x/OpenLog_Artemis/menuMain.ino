@@ -43,7 +43,7 @@ void menuMain(bool alwaysOpen)
 
     SerialPrintln(F("5) Configure Analog Logging"));
 
-    SerialPrintln(F("6) Detect / Configure Attached Devices"));
+    // SerialPrintln(F("6) Detect / Configure Attached Devices"));
 
     SerialPrintln(F("7) Configure Power Options"));
 
@@ -72,8 +72,8 @@ void menuMain(bool alwaysOpen)
       menuSerialLogging();
     else if (incoming == '5')
       menuAnalogLogging();
-    else if (incoming == '6')
-      menuAttachedDevices();
+    // else if (incoming == '6')
+      // menuAttachedDevices();
     else if (incoming == '7')
       menuPower();
     else if (incoming == 'h')
@@ -189,9 +189,9 @@ void menuMain(bool alwaysOpen)
 
   recordSystemSettings(); //Once all menus have exited, record the new settings to EEPROM and config file
 
-  recordDeviceSettingsToFile(); //Record the current devices settings to device config file
+  // recordDeviceSettingsToFile(); //Record the current devices settings to device config file
 
-  configureQwiicDevices(); //Reconfigure the qwiic devices in case any settings have changed
+  // configureQwiicDevices(); //Reconfigure the qwiic devices in case any settings have changed
 
   if (restartIMU == true)
     beginIMU(); // Restart the IMU if required

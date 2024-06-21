@@ -143,15 +143,15 @@ void getTimeString(char timeStringBuffer[])
 //
 //Note: this function should only be called if we know that a u-blox GNSS is actually connected
 //
-void getGPSDateTime(int &year, int &month, int &day, int &hour, int &minute, int &second, int &millisecond, bool &dateValid, bool &timeValid) {
-  //Get latested date/time from GPS
-  //These will be extracted from a single PVT packet
-  getUbloxDateTime(year, month, day, hour, minute, second, millisecond, dateValid, timeValid);
-  //Do it twice - to make sure the data is fresh
-  getUbloxDateTime(year, month, day, hour, minute, second, millisecond, dateValid, timeValid);
+// void getGPSDateTime(int &year, int &month, int &day, int &hour, int &minute, int &second, int &millisecond, bool &dateValid, bool &timeValid) {
+//   //Get latested date/time from GPS
+//   //These will be extracted from a single PVT packet
+//   getUbloxDateTime(year, month, day, hour, minute, second, millisecond, dateValid, timeValid);
+//   //Do it twice - to make sure the data is fresh
+//   getUbloxDateTime(year, month, day, hour, minute, second, millisecond, dateValid, timeValid);
 
-  adjustToLocalDateTime(year, month, day, hour, minute, settings.localUTCOffset);
-}
+//   adjustToLocalDateTime(year, month, day, hour, minute, settings.localUTCOffset);
+// }
 
 //Given the date and hour, calculate local date/time
 //Adjust the hour by local hour offset

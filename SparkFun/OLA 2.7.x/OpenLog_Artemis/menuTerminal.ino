@@ -180,7 +180,7 @@ void menuLogRate()
       {
         settings.serialTerminalBaudRate = newBaud;
         recordSystemSettings(); //Normally recorded upon all menu exits
-        recordDeviceSettingsToFile(); //Normally recorded upon all menu exits
+        // recordDeviceSettingsToFile(); //Normally recorded upon all menu exits
         SerialPrintf2("Terminal now set at %dbps. Please reset device and open terminal at new baud rate. Freezing...\r\n", settings.serialTerminalBaudRate);
         while (1);
       }
@@ -248,7 +248,7 @@ void menuLogRate()
             sensorDataFile.close();
   
             recordSystemSettings(); //Normally recorded upon all menu exits
-            recordDeviceSettingsToFile(); //Normally recorded upon all menu exits
+            // recordDeviceSettingsToFile(); //Normally recorded upon all menu exits
   
             SerialPrintln(F("OpenLog Artemis configured for max data rate. Please reset. Freezing..."));
             while (1);

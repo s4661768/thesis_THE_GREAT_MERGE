@@ -555,13 +555,13 @@ void wakeFromSleep()
   beginIMU(true); //61ms
   printDebug("wakeFromSleep: online.IMU = " + (String)online.IMU + "\r\n");
 
-  //If we powered down the Qwiic bus, then re-begin and re-configure everything
-  if (settings.powerDownQwiicBusBetweenReads == true)
-  {
-    beginQwiicDevices(); // beginQwiicDevices will wait for the qwiic devices to power up
-    //loadDeviceSettingsFromFile(); //Apply device settings after the Qwiic bus devices have been detected and begin()'d
-    configureQwiicDevices(); //Apply config settings to each device in the node list
-  }
+  // //If we powered down the Qwiic bus, then re-begin and re-configure everything
+  // if (settings.powerDownQwiicBusBetweenReads == true)
+  // {
+  //   beginQwiicDevices(); // beginQwiicDevices will wait for the qwiic devices to power up
+  //   //loadDeviceSettingsFromFile(); //Apply device settings after the Qwiic bus devices have been detected and begin()'d
+  //   configureQwiicDevices(); //Apply config settings to each device in the node list
+  // }
   
   // Late in the process to allow time for external device to generate unwanted signals
   while(Serial.available())  // Flush the input buffer

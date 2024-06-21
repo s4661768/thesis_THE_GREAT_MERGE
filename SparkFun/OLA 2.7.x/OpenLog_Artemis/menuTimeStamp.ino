@@ -96,17 +96,17 @@ void menuTimeStamp()
       else SerialPrintln(F("12 hour"));
     }
 
-    if (settings.logDate == true || settings.logTime == true)
-    {
-      if (isUbloxAttached() == true)
-      {
-        SerialPrintln(F("8) Synchronize RTC to GPS"));
-      }
-      SerialPrint(F("9) Local offset from UTC: "));
-      Serial.println(settings.localUTCOffset);
-      if (settings.useTxRxPinsForTerminal == true)
-        Serial1.println(settings.localUTCOffset);
-    }
+    // if (settings.logDate == true || settings.logTime == true)
+    // {
+    //   if (isUbloxAttached() == true)
+    //   {
+    //     SerialPrintln(F("8) Synchronize RTC to GPS"));
+    //   }
+    //   SerialPrint(F("9) Local offset from UTC: "));
+    //   Serial.println(settings.localUTCOffset);
+    //   if (settings.useTxRxPinsForTerminal == true)
+    //     Serial1.println(settings.localUTCOffset);
+    // }
 
     SerialPrint(F("10) Log Microseconds: "));
     if (settings.logMicroseconds == true) SerialPrintln(F("Enabled"));
@@ -135,20 +135,20 @@ void menuTimeStamp()
         myRTC.setToCompilerTime(); //Set RTC using the system __DATE__ and __TIME__ macros from compiler
         SerialPrintln(F("RTC set to compiler time"));
       }
-      else if ((incoming == 8) && (isUbloxAttached() == true))
-      {
-        myRTC.getTime(); // Get the RTC date and time (just in case getGPSDateTime fails)
-        int dd = myRTC.dayOfMonth, mm = myRTC.month, yy = myRTC.year, h = myRTC.hour, m = myRTC.minute, s = myRTC.seconds, ms = (myRTC.hundredths * 10);
-        bool dateValid, timeValid;
-        getGPSDateTime(yy, mm, dd, h, m, s, ms, dateValid, timeValid); // Get the GPS date and time, corrected for localUTCOffset
-        myRTC.setTime((ms / 10), s, m, h, dd, mm, (yy - 2000)); //Manually set RTC
-        lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
-        SerialPrintln(F("RTC set to GPS (UTC) time"));
-        if ((dateValid == false) || (timeValid == false))
-        {
-          SerialPrintln(F("\r\nWarning: the GPS time or date was not valid. Please try again.\r\n"));
-        }
-      }
+      // else if ((incoming == 8) && (isUbloxAttached() == true))
+      // {
+      //   myRTC.getTime(); // Get the RTC date and time (just in case getGPSDateTime fails)
+      //   int dd = myRTC.dayOfMonth, mm = myRTC.month, yy = myRTC.year, h = myRTC.hour, m = myRTC.minute, s = myRTC.seconds, ms = (myRTC.hundredths * 10);
+      //   bool dateValid, timeValid;
+      //   getGPSDateTime(yy, mm, dd, h, m, s, ms, dateValid, timeValid); // Get the GPS date and time, corrected for localUTCOffset
+      //   myRTC.setTime((ms / 10), s, m, h, dd, mm, (yy - 2000)); //Manually set RTC
+      //   lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
+      //   SerialPrintln(F("RTC set to GPS (UTC) time"));
+      //   if ((dateValid == false) || (timeValid == false))
+      //   {
+      //     SerialPrintln(F("\r\nWarning: the GPS time or date was not valid. Please try again.\r\n"));
+      //   }
+      // }
       else if (incoming == 9)
       {
         SerialPrint(F("Enter the local hour offset from UTC (-12 to 14): "));
