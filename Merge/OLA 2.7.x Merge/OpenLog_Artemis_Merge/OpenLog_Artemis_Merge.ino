@@ -155,7 +155,9 @@
   v2.7:
     Resolve serial logging issue - crash on startup - #182
 */
-
+// Nathan bug fix attempt
+#include "bug_fix.h"
+#include "Sensors.h"
 // Added by Nathan
 //----------------------------------------------------------------------------
 // WMORE defines
@@ -923,215 +925,6 @@ void setupSync(void) {
 }
 
 //----------------------------------------------------------------------------
-// WMORE
-// Modified and simplified original setup()
-
-void setup() {
-  // Ensure clocks are in a known state
-  clockState();
-  // Set up synchronisation inputs, timers, and ISRs
-  setupSync();
-  
-  //If 3.3V rail drops below 3V, system will power down and maintain RTC
-  pinMode(PIN_POWER_LOSS, INPUT); // BD49K30G-TL has CMOS output and does not need a pull-up
-
-  delay(1); // Let PIN_POWER_LOSS stabilize
-
-  if (digitalRead(PIN_POWER_LOSS) == LOW) powerDownOLA(); //Check PIN_POWER_LOSS just in case we missed the falling edge
-  //attachInterrupt(PIN_POWER_LOSS, powerDownOLA, FALLING); // We can't do this with v2.1.0 as attachInterrupt causes a spontaneous interrupt
-  attachInterrupt(PIN_POWER_LOSS, powerLossISR, FALLING);
-  powerLossSeen = false; // Make sure the flag is clear
-
-  pinMode(PIN_STAT_LED, OUTPUT);
-  digitalWrite(PIN_STAT_LED, HIGH); // Turn the blue LED on while we configure everything
-
-  SPI.begin(); //Needed if SD is disabled
-
-  configureSerial1TxRx(); // Configure Serial1
-
-  Serial.begin(115200); //Default for initial debug messages if necessary
-  Serial1.begin(460800); // Set up to transmit/receive global timestamps
-
-  EEPROM.init();
-
-  beginSD(); //285 - 293ms
-
-  enableCIPOpullUp(); // Enable CIPO pull-up _after_ beginSD
-
-  loadSettings(); //50 - 250ms
-
-  overrideSettings(); // Hard-code some critical settings to avoid accidents
-
-  Serial.flush(); //Complete any previous prints
-  Serial.begin(settings.serialTerminalBaudRate); // TODO settings
-
-  Serial.println(WMORE_VERSION);
-
-  // Setup the stop logging pin
-  pinMode(PIN_STOP_LOGGING, INPUT_PULLUP);
-  delay(1); // Let the pin stabilize
-  attachInterrupt(PIN_STOP_LOGGING, stopLoggingISR, FALLING); // Enable the interrupt
-  am_hal_gpio_pincfg_t intPinConfig = g_AM_HAL_GPIO_INPUT_PULLUP;
-  intPinConfig.eIntDir = AM_HAL_GPIO_PIN_INTDIR_HI2LO;
-  pin_config(PinName(PIN_STOP_LOGGING), intPinConfig); // Make sure the pull-up does actually stay enabled
-  stopLoggingSeen = false; // Make sure the flag is clear
-
-  // Modified by Sami -- set pin 12 to output and low
-  pinMode(BREAKOUT_PIN_TX, OUTPUT);
-  digitalWrite(BREAKOUT_PIN_TX, LOW);
-  // end of modification
- 
-  analogReadResolution(14); //Increase from default of 10
-
-  beginDataLogging(); //180ms
-  lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
-
-  beginIMU(); //61ms
-
-  if (online.microSD == true) SerialPrintln(F("SD card online"));
-  else SerialPrintln(F("SD card offline"));
-
-  if (online.dataLogging == true) SerialPrintln(F("Data logging online"));
-  else SerialPrintln(F("Datalogging offline"));
-
-  if (online.IMU == true) SerialPrintln(F("IMU online"));
-  else SerialPrintln(F("IMU offline - or not present"));
-
-  digitalWrite(PIN_STAT_LED, LOW); // Turn the blue LED off
-
-  // Nathan: We are waiting here until PIN_TRIGGER is low. Once that happens we enter the main loop
-  waitToLog(); // Wait for sync falling edge to start logging
-
-}
-
-//----------------------------------------------------------------------------
-// WMORE
-// Modified and simplified original loop()
-
-void loop() {
-
-  // if (timerIntFlag == true) { // Act if sampling timer has interrupted
-
-    // added by Sami -- set pin 12 to toggle between low and high
-    // digitalWrite(BREAKOUT_PIN_TX, HIGH);
-    extTimerValue2 = am_hal_stimer_counter_get();// added by Sami
-    timerIntFlag = false; // Reset sampling timer flag
-    myRTC.getTime(); // Get the local time from the RTC
-    lastSamplingPeriod = samplingPeriod; // added by Sami // the previous sampling period to write to SD card
-    getData(); // Get data from IMU and global time from Coordinator 
-    
-    // writeSDBin(); // Store IMU and time data     
-//     if (stopLoggingSeen == true) { // Stop logging if directed by Coordinator
-//       stopLoggingSeen = false; // Reset the flag
-//       resetArtemis(); // Reset the system
-// //      stopLoggingStayAwake(); // Close file and prepare for next start command
-// //      beginDataLogging(); // Open file in preparation for next logging run
-// //      waitToLog(); // Wait until directed to start logging again
-//     } 
-    // added by Sami -- set pin 12 to toggle between low and high
-    // digitalWrite(BREAKOUT_PIN_TX, LOW); 
-    // end of modification
-    samplingPeriod = am_hal_stimer_counter_get() - extTimerValue2; // added by Sami
-  // }  
-
-  if (Serial.available()) {
-    menuMain(); //Present user menu if serial character received
-  }  
-  
-  checkBattery(); // Check for low battery and shutdown if low
-  
-  // Debug: output time difference for performance evaluation
-  //if (triggerPinFlag == true) {
-  //  triggerPinFlag = false;
-  //  Serial.println(timeDifference);
-  //}
-
-}
-
-//----------------------------------------------------------------------------
-
-void beginSD()
-{
-  pinMode(PIN_MICROSD_POWER, OUTPUT);
-  pin_config(PinName(PIN_MICROSD_POWER), g_AM_HAL_GPIO_OUTPUT); // Make sure the pin does actually get re-configured
-  pinMode(PIN_MICROSD_CHIP_SELECT, OUTPUT);
-  pin_config(PinName(PIN_MICROSD_CHIP_SELECT), g_AM_HAL_GPIO_OUTPUT); // Make sure the pin does actually get re-configured
-  digitalWrite(PIN_MICROSD_CHIP_SELECT, HIGH); //Be sure SD is deselected
-
-  // If the microSD card is present, it needs to be powered on otherwise the IMU will fail to start
-  // (The microSD card will pull the SPI pins low, preventing communication with the IMU)
-
-  // For reasons I don't understand, we seem to have to wait for at least 1ms after SPI.begin before we call microSDPowerOn.
-  // If you comment the next line, the Artemis resets at microSDPowerOn when beginSD is called from wakeFromSleep...
-  // But only on one of my V10 red boards. The second one I have doesn't seem to need the delay!?
-  delay(5);
-
-  microSDPowerOn();
-
-  //Max power up time is 250ms: https://www.kingston.com/datasheets/SDCIT-specsheet-64gb_en.pdf
-  //Max current is 200mA average across 1s, peak 300mA
-  for (int i = 0; i < 10; i++) //Wait
-  {
-    checkBattery();
-    delay(1);
-  }
-
-  if (sd.begin(SD_CONFIG) == false) // Try to begin the SD card using the correct chip select
-  {
-    printDebug(F("SD init failed (first attempt). Trying again...\r\n"));
-    for (int i = 0; i < 250; i++) //Give SD more time to power up, then try again
-    {
-      checkBattery();
-      delay(1);
-    }
-    if (sd.begin(SD_CONFIG) == false) // Try to begin the SD card using the correct chip select
-    {
-      SerialPrintln(F("SD init failed (second attempt). Is card present? Formatted?"));
-      SerialPrintln(F("Please ensure the SD card is formatted correctly using https://www.sdcard.org/downloads/formatter/"));
-      digitalWrite(PIN_MICROSD_CHIP_SELECT, HIGH); //Be sure SD is deselected
-      online.microSD = false;
-      return;
-    }
-  }
-
-  //Change to root directory. All new file creation will be in root.
-  if (sd.chdir() == false)
-  {
-    SerialPrintln(F("SD change directory failed"));
-    online.microSD = false;
-    return;
-  }
-
-  online.microSD = true;
-}
-
-void enableCIPOpullUp() // updated for v2.1.0 of the Apollo3 core
-{
-  //Add 1K5 pull-up on CIPO
-  am_hal_gpio_pincfg_t cipoPinCfg = g_AM_BSP_GPIO_IOM0_MISO;
-  cipoPinCfg.ePullup = AM_HAL_GPIO_PIN_PULLUP_1_5K;
-  pin_config(PinName(PIN_SPI_CIPO), cipoPinCfg);
-}
-
-void disableCIPOpullUp() // updated for v2.1.0 of the Apollo3 core
-{
-  am_hal_gpio_pincfg_t cipoPinCfg = g_AM_BSP_GPIO_IOM0_MISO;
-  pin_config(PinName(PIN_SPI_CIPO), cipoPinCfg);
-}
-
-void configureSerial1TxRx(void) // Configure pins 12 and 13 for UART1 TX and RX
-{
-  // Commented out by Sami ---------------------------------------------
-  am_hal_gpio_pincfg_t pinConfigTx = g_AM_BSP_GPIO_COM_UART_TX; // Commented back in by Nathan
-  pinConfigTx.uFuncSel = AM_HAL_PIN_12_UART1TX;
-  pin_config(PinName(BREAKOUT_PIN_TX), pinConfigTx);
-  am_hal_gpio_pincfg_t pinConfigRx = g_AM_BSP_GPIO_COM_UART_RX;
-  pinConfigRx.uFuncSel = AM_HAL_PIN_13_UART1RX;
-  pinConfigRx.ePullup = AM_HAL_GPIO_PIN_PULLUP_WEAK; // Put a weak pull-up on the Rx pin
-  pin_config(PinName(BREAKOUT_PIN_RX), pinConfigRx);
-}
-
-//----------------------------------------------------------------------------
 
 void beginIMU()
 {
@@ -1412,28 +1205,28 @@ void beginIMU()
 //     }
 // #endif
 // Commented back in by Nathan | Merge
-    getData(sdOutputData, sizeof(sdOutputData)); //Query all enabled sensors for data 
+    // getData(sdOutputData, sizeof(sdOutputData)); //Query all enabled sensors for data 
 
-    //Print to terminal
-    if (settings.enableTerminalOutput == true)
-      SerialPrint(sdOutputData); //Print to terminal
+    // //Print to terminal
+    // if (settings.enableTerminalOutput == true)
+    //   SerialPrint(sdOutputData); //Print to terminal
 
-    //Output to TX pin
-    if ((settings.outputSerial == true) && (online.serialOutput == true))
-      Serial1.print(sdOutputData); //Print to TX pin
+    // //Output to TX pin
+    // if ((settings.outputSerial == true) && (online.serialOutput == true))
+    //   Serial1.print(sdOutputData); //Print to TX pin
 
-    //Record to SD
-    if ((settings.logData == true) && (online.microSD))
-    {
-      digitalWrite(PIN_STAT_LED, HIGH);
-      uint32_t recordLength = sensorDataFile.write(sdOutputData, strlen(sdOutputData));
-      if (recordLength != strlen(sdOutputData)) //Record the buffer to the card
-      {
-        if (settings.printDebugMessages == true)
-        {
-          SerialPrintf3("*** sensorDataFile.write data length mismatch! *** recordLength: %d, outputDataLength: %d\r\n", recordLength, strlen(sdOutputData));
-        }
-      }
+    // //Record to SD
+    // if ((settings.logData == true) && (online.microSD))
+    // {
+    //   digitalWrite(PIN_STAT_LED, HIGH);
+    //   uint32_t recordLength = sensorDataFile.write(sdOutputData, strlen(sdOutputData));
+    //   if (recordLength != strlen(sdOutputData)) //Record the buffer to the card
+    //   {
+    //     if (settings.printDebugMessages == true)
+    //     {
+    //       SerialPrintf3("*** sensorDataFile.write data length mismatch! *** recordLength: %d, outputDataLength: %d\r\n", recordLength, strlen(sdOutputData));
+    //     }
+    //   }
 
 //       //Force sync every 500ms
 //       if (rtcMillis() - lastDataLogSyncTime > 500)
@@ -2380,4 +2173,217 @@ void DoSerialPrint(char (*funct)(const char *), const char *string, bool newLine
     if (settings.useTxRxPinsForTerminal == true)
       Serial1.println();
   }
+}
+
+
+//----------------------------------------------------------------------------
+// WMORE
+// Modified and simplified original setup()
+
+void setup() {
+  // Ensure clocks are in a known state
+  clockState();
+  // Set up synchronisation inputs, timers, and ISRs
+  setupSync();
+  
+  //If 3.3V rail drops below 3V, system will power down and maintain RTC
+  pinMode(PIN_POWER_LOSS, INPUT); // BD49K30G-TL has CMOS output and does not need a pull-up
+
+  delay(1); // Let PIN_POWER_LOSS stabilize
+
+  if (digitalRead(PIN_POWER_LOSS) == LOW) powerDownOLA(); //Check PIN_POWER_LOSS just in case we missed the falling edge
+  //attachInterrupt(PIN_POWER_LOSS, powerDownOLA, FALLING); // We can't do this with v2.1.0 as attachInterrupt causes a spontaneous interrupt
+  attachInterrupt(PIN_POWER_LOSS, powerLossISR, FALLING);
+  powerLossSeen = false; // Make sure the flag is clear
+
+  pinMode(PIN_STAT_LED, OUTPUT);
+  digitalWrite(PIN_STAT_LED, HIGH); // Turn the blue LED on while we configure everything
+
+  SPI.begin(); //Needed if SD is disabled
+
+  configureSerial1TxRx(); // Configure Serial1
+
+  Serial.begin(115200); //Default for initial debug messages if necessary
+  Serial1.begin(460800); // Set up to transmit/receive global timestamps
+
+  EEPROM.init();
+
+  beginSD(); //285 - 293ms
+
+  enableCIPOpullUp(); // Enable CIPO pull-up _after_ beginSD
+
+  loadSettings(); //50 - 250ms
+
+  overrideSettings(); // Hard-code some critical settings to avoid accidents
+
+  Serial.flush(); //Complete any previous prints
+  Serial.begin(settings.serialTerminalBaudRate); // TODO settings
+
+  Serial.println(WMORE_VERSION);
+
+  // Setup the stop logging pin
+  pinMode(PIN_STOP_LOGGING, INPUT_PULLUP);
+  delay(1); // Let the pin stabilize
+  attachInterrupt(PIN_STOP_LOGGING, stopLoggingISR, FALLING); // Enable the interrupt
+  am_hal_gpio_pincfg_t intPinConfig = g_AM_HAL_GPIO_INPUT_PULLUP;
+  intPinConfig.eIntDir = AM_HAL_GPIO_PIN_INTDIR_HI2LO;
+  pin_config(PinName(PIN_STOP_LOGGING), intPinConfig); // Make sure the pull-up does actually stay enabled
+  stopLoggingSeen = false; // Make sure the flag is clear
+
+  // Modified by Sami -- set pin 12 to output and low
+  pinMode(BREAKOUT_PIN_TX, OUTPUT);
+  digitalWrite(BREAKOUT_PIN_TX, LOW);
+  // end of modification
+ 
+  analogReadResolution(14); //Increase from default of 10
+
+  beginDataLogging(); //180ms
+  lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
+
+  beginIMU(); //61ms
+
+  if (online.microSD == true) SerialPrintln(F("SD card online"));
+  else SerialPrintln(F("SD card offline"));
+
+  if (online.dataLogging == true) SerialPrintln(F("Data logging online"));
+  else SerialPrintln(F("Datalogging offline"));
+
+  if (online.IMU == true) SerialPrintln(F("IMU online"));
+  else SerialPrintln(F("IMU offline - or not present"));
+
+  digitalWrite(PIN_STAT_LED, LOW); // Turn the blue LED off
+
+  // Nathan: We are waiting here until PIN_TRIGGER is low. Once that happens we enter the main loop
+  waitToLog(); // Wait for sync falling edge to start logging
+
+}
+
+//----------------------------------------------------------------------------
+// WMORE
+// Modified and simplified original loop()
+
+void loop() {
+
+  // if (timerIntFlag == true) { // Act if sampling timer has interrupted
+
+    // added by Sami -- set pin 12 to toggle between low and high
+    // digitalWrite(BREAKOUT_PIN_TX, HIGH);
+    extTimerValue2 = am_hal_stimer_counter_get();// added by Sami
+    timerIntFlag = false; // Reset sampling timer flag
+    myRTC.getTime(); // Get the local time from the RTC
+    lastSamplingPeriod = samplingPeriod; // added by Sami // the previous sampling period to write to SD card
+    
+    // Must use the new version of 'getData' | Nathan
+    // getData(); // Get data from IMU and global time from Coordinator 
+    getData(sdOutputData, sizeof(sdOutputData)); //Query all enabled sensors for data
+    
+    // writeSDBin(); // Store IMU and time data     
+//     if (stopLoggingSeen == true) { // Stop logging if directed by Coordinator
+//       stopLoggingSeen = false; // Reset the flag
+//       resetArtemis(); // Reset the system
+// //      stopLoggingStayAwake(); // Close file and prepare for next start command
+// //      beginDataLogging(); // Open file in preparation for next logging run
+// //      waitToLog(); // Wait until directed to start logging again
+//     } 
+    // added by Sami -- set pin 12 to toggle between low and high
+    // digitalWrite(BREAKOUT_PIN_TX, LOW); 
+    // end of modification
+    samplingPeriod = am_hal_stimer_counter_get() - extTimerValue2; // added by Sami
+  // }  
+
+  if (Serial.available()) {
+    menuMain(); //Present user menu if serial character received
+  }  
+  
+  checkBattery(); // Check for low battery and shutdown if low
+  
+  // Debug: output time difference for performance evaluation
+  //if (triggerPinFlag == true) {
+  //  triggerPinFlag = false;
+  //  Serial.println(timeDifference);
+  //}
+
+}
+
+//----------------------------------------------------------------------------
+
+void beginSD()
+{
+  pinMode(PIN_MICROSD_POWER, OUTPUT);
+  pin_config(PinName(PIN_MICROSD_POWER), g_AM_HAL_GPIO_OUTPUT); // Make sure the pin does actually get re-configured
+  pinMode(PIN_MICROSD_CHIP_SELECT, OUTPUT);
+  pin_config(PinName(PIN_MICROSD_CHIP_SELECT), g_AM_HAL_GPIO_OUTPUT); // Make sure the pin does actually get re-configured
+  digitalWrite(PIN_MICROSD_CHIP_SELECT, HIGH); //Be sure SD is deselected
+
+  // If the microSD card is present, it needs to be powered on otherwise the IMU will fail to start
+  // (The microSD card will pull the SPI pins low, preventing communication with the IMU)
+
+  // For reasons I don't understand, we seem to have to wait for at least 1ms after SPI.begin before we call microSDPowerOn.
+  // If you comment the next line, the Artemis resets at microSDPowerOn when beginSD is called from wakeFromSleep...
+  // But only on one of my V10 red boards. The second one I have doesn't seem to need the delay!?
+  delay(5);
+
+  microSDPowerOn();
+
+  //Max power up time is 250ms: https://www.kingston.com/datasheets/SDCIT-specsheet-64gb_en.pdf
+  //Max current is 200mA average across 1s, peak 300mA
+  for (int i = 0; i < 10; i++) //Wait
+  {
+    checkBattery();
+    delay(1);
+  }
+
+  if (sd.begin(SD_CONFIG) == false) // Try to begin the SD card using the correct chip select
+  {
+    printDebug(F("SD init failed (first attempt). Trying again...\r\n"));
+    for (int i = 0; i < 250; i++) //Give SD more time to power up, then try again
+    {
+      checkBattery();
+      delay(1);
+    }
+    if (sd.begin(SD_CONFIG) == false) // Try to begin the SD card using the correct chip select
+    {
+      SerialPrintln(F("SD init failed (second attempt). Is card present? Formatted?"));
+      SerialPrintln(F("Please ensure the SD card is formatted correctly using https://www.sdcard.org/downloads/formatter/"));
+      digitalWrite(PIN_MICROSD_CHIP_SELECT, HIGH); //Be sure SD is deselected
+      online.microSD = false;
+      return;
+    }
+  }
+
+  //Change to root directory. All new file creation will be in root.
+  if (sd.chdir() == false)
+  {
+    SerialPrintln(F("SD change directory failed"));
+    online.microSD = false;
+    return;
+  }
+
+  online.microSD = true;
+}
+
+void enableCIPOpullUp() // updated for v2.1.0 of the Apollo3 core
+{
+  //Add 1K5 pull-up on CIPO
+  am_hal_gpio_pincfg_t cipoPinCfg = g_AM_BSP_GPIO_IOM0_MISO;
+  cipoPinCfg.ePullup = AM_HAL_GPIO_PIN_PULLUP_1_5K;
+  pin_config(PinName(PIN_SPI_CIPO), cipoPinCfg);
+}
+
+void disableCIPOpullUp() // updated for v2.1.0 of the Apollo3 core
+{
+  am_hal_gpio_pincfg_t cipoPinCfg = g_AM_BSP_GPIO_IOM0_MISO;
+  pin_config(PinName(PIN_SPI_CIPO), cipoPinCfg);
+}
+
+void configureSerial1TxRx(void) // Configure pins 12 and 13 for UART1 TX and RX
+{
+  // Commented out by Sami ---------------------------------------------
+  am_hal_gpio_pincfg_t pinConfigTx = g_AM_BSP_GPIO_COM_UART_TX; // Commented back in by Nathan
+  pinConfigTx.uFuncSel = AM_HAL_PIN_12_UART1TX;
+  pin_config(PinName(BREAKOUT_PIN_TX), pinConfigTx);
+  am_hal_gpio_pincfg_t pinConfigRx = g_AM_BSP_GPIO_COM_UART_RX;
+  pinConfigRx.uFuncSel = AM_HAL_PIN_13_UART1RX;
+  pinConfigRx.ePullup = AM_HAL_GPIO_PIN_PULLUP_WEAK; // Put a weak pull-up on the Rx pin
+  pin_config(PinName(BREAKOUT_PIN_RX), pinConfigRx);
 }

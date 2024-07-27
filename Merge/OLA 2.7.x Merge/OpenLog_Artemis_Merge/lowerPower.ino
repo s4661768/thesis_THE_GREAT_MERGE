@@ -540,7 +540,9 @@ void wakeFromSleep()
 
   SPI.begin(); //Needed if SD is disabled
 
-  beginSD(true); //285 - 293ms
+  // Using the old version of beginSD | Nathan
+  // beginSD(true); //285 - 293ms
+  beginSD();
 
   enableCIPOpullUp(); // Enable CIPO pull-up _after_ beginSD
 
@@ -552,7 +554,11 @@ void wakeFromSleep()
     beginSerialOutput();
   }
 
-  beginIMU(true); //61ms
+  // Not sure what to do here. I can't seem to find the definition but everywhere else 'beginIMU' is called it doesn't have any args
+  // I shall change this call to "beginIMU();"
+  // beginIMU(true); //61ms
+  beginIMU();
+
   printDebug("wakeFromSleep: online.IMU = " + (String)online.IMU + "\r\n");
 
   // //If we powered down the Qwiic bus, then re-begin and re-configure everything
@@ -634,6 +640,7 @@ void qwiicPowerOn()
 
   qwiicPowerOnTime = rtcMillis(); //Record this time so we wait enough time before detecting certain sensors
 }
+
 void qwiicPowerOff()
 {
   pinMode(PIN_QWIIC_POWER, OUTPUT);
