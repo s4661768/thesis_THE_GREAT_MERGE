@@ -593,7 +593,6 @@ void setup() {
 }
 
 void loop() {
-
   checkBattery(); // Check for low battery
 
   if ((Serial.available()) || ((settings.useTxRxPinsForTerminal == true) && (Serial1.available())))

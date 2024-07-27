@@ -576,6 +576,7 @@ struct struct_settings {
   bool serialTxRxDuringSleep = false; // If true, the Serial Tx and Rx pins are left enabled during sleep - to prevent the COM port reinitializing
   bool printGNSSDebugMessages = false; // If true, the GNSS library debug messages are enabled
   bool openMenuWithPrintable = false; // If true, only a printable char can open the main menu. Chars < 9 (Tab) are ignored
+  uint8_t serialNumber = 0; // OW // Nathan Merge
 } settings;
 
 //These are the devices on board OpenLog that may be on or offline.
