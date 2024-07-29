@@ -2011,7 +2011,9 @@ void overrideSettings(void) {
   settings.dateStyle = 1; // dd/mm/yy
   settings.hour24Style = 1; // 24 hour
 //settings.serialTerminalBaudRate = 115200; // User set
-  settings.serialLogBaudRate = 9600; // Disabled 
+  // Changing this setting to 115200 | Nathan
+  // settings.serialLogBaudRate = 9600; // Disabled 
+  settings.serialLogBaudRate = 115200; // Disabled 
   settings.showHelperText = 0; // Disabled
   settings.logA11 = 0; // Disabled
   settings.logA12 = 0; // Disabled
@@ -2032,8 +2034,8 @@ void overrideSettings(void) {
   settings.qwiicBusPullUps = 1; // Disabled
   settings.outputSerial = 0; // Disabled
 //settings.zmodemStartDelay = 20; // User set
-//settings.enableLowBatteryDetection = 0; // User set 
-//settings.lowBatteryThreshold = 3.40; // User set
+  settings.enableLowBatteryDetection = 1; // User set 
+  settings.lowBatteryThreshold = 3.40; // User set
   settings.frequentFileAccessTimestamps = 0; // Disabled
   settings.useGPIO11ForTrigger = 0; // GPIO11 used for synchronisation instead
   settings.fallingEdgeTrigger = 1; // Falling edge synchronisation
@@ -2204,7 +2206,10 @@ void setup() {
   configureSerial1TxRx(); // Configure Serial1
 
   Serial.begin(115200); //Default for initial debug messages if necessary
-  Serial1.begin(460800); // Set up to transmit/receive global timestamps
+
+  // Changing the baud rate of Serial1 to be 115200 | Nathan
+  // Serial1.begin(460800); // Set up to transmit/receive global timestamps
+  Serial1.begin(115200);
 
   EEPROM.init();
 
@@ -2230,10 +2235,11 @@ void setup() {
   pin_config(PinName(PIN_STOP_LOGGING), intPinConfig); // Make sure the pull-up does actually stay enabled
   stopLoggingSeen = false; // Make sure the flag is clear
 
-  // Modified by Sami -- set pin 12 to output and low
-  pinMode(BREAKOUT_PIN_TX, OUTPUT);
-  digitalWrite(BREAKOUT_PIN_TX, LOW);
-  // end of modification
+  // Commented out by nathan to allow pins 12 and 13 to but used as UART pins
+  // // Modified by Sami -- set pin 12 to output and low
+  // pinMode(BREAKOUT_PIN_TX, OUTPUT);
+  // digitalWrite(BREAKOUT_PIN_TX, LOW);
+  // // end of modification
  
   analogReadResolution(14); //Increase from default of 10
 
@@ -2276,6 +2282,13 @@ void loop() {
     // Must use the new version of 'getData' | Nathan
     // getData(); // Get data from IMU and global time from Coordinator 
     getData(sdOutputData, sizeof(sdOutputData)); //Query all enabled sensors for data
+   
+    // Serial.println(sdOutputData); // Added in | Nathan
+    SerialPrintf1(sdOutputData); // Added in | Nathan
+    
+    // Serial1.print(sdOutputData); // Added in | Nathan
+    // SerialPrintln(F("Please ensure the SD card is formatted correctly using https://www.sdcard.org/downloads/formatter/"));
+
     
     // writeSDBin(); // Store IMU and time data     
 //     if (stopLoggingSeen == true) { // Stop logging if directed by Coordinator
