@@ -2270,8 +2270,9 @@ void setup() {
 
 void loop() {
 
-  // if (timerIntFlag == true) { // Act if sampling timer has interrupted
+  if (timerIntFlag == true) { // Act if sampling timer has interrupted
 
+    // Commented out by Nathan
     // added by Sami -- set pin 12 to toggle between low and high
     // digitalWrite(BREAKOUT_PIN_TX, HIGH);
     extTimerValue2 = am_hal_stimer_counter_get();// added by Sami
@@ -2290,19 +2291,19 @@ void loop() {
     // SerialPrintln(F("Please ensure the SD card is formatted correctly using https://www.sdcard.org/downloads/formatter/"));
 
     
-    // writeSDBin(); // Store IMU and time data     
-//     if (stopLoggingSeen == true) { // Stop logging if directed by Coordinator
-//       stopLoggingSeen = false; // Reset the flag
-//       resetArtemis(); // Reset the system
-// //      stopLoggingStayAwake(); // Close file and prepare for next start command
-// //      beginDataLogging(); // Open file in preparation for next logging run
-// //      waitToLog(); // Wait until directed to start logging again
-//     } 
+    writeSDBin(); // Store IMU and time data     
+    if (stopLoggingSeen == true) { // Stop logging if directed by Coordinator
+      stopLoggingSeen = false; // Reset the flag
+      resetArtemis(); // Reset the system
+      stopLoggingStayAwake(); // Close file and prepare for next start command
+      beginDataLogging(); // Open file in preparation for next logging run
+      waitToLog(); // Wait until directed to start logging again
+    } 
     // added by Sami -- set pin 12 to toggle between low and high
     // digitalWrite(BREAKOUT_PIN_TX, LOW); 
     // end of modification
     samplingPeriod = am_hal_stimer_counter_get() - extTimerValue2; // added by Sami
-  // }  
+  }  
 
   if (Serial.available()) {
     menuMain(); //Present user menu if serial character received
