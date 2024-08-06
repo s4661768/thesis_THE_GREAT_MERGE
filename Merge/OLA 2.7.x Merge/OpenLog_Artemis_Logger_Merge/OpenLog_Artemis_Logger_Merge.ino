@@ -1821,7 +1821,7 @@ void beginSerialLogging()
     serialDataFile.sync();
 
     //We need to manually restore the Serial1 TX and RX pins
-    configureSerial1TxRx();
+    // configureSerial1TxRx(); // Commented out by Nathan to do external synchronisation test using Rx pin as drumbeat line
 
     Serial1.begin(settings.serialLogBaudRate);
 
@@ -1836,7 +1836,7 @@ void beginSerialOutput()
   if (settings.outputSerial == true)
   {
     //We need to manually restore the Serial1 TX and RX pins
-    configureSerial1TxRx();
+    // configureSerial1TxRx(); // Commented out by Nathan to do external synchronisation test using Rx pin as drumbeat line
 
     Serial1.begin(settings.serialLogBaudRate); // (Re)start the serial port
     online.serialOutput = true;
@@ -2069,8 +2069,8 @@ void overrideSettings(void) {
 //settings.serialNumber = 0; // User set
 
  //------------------- Nathan
- settings.useGPIO11ForTrigger = true;
- settings.useTxRxPinsForTerminal = true;
+ settings.useGPIO11ForTrigger = false; // Drumbeat line os must be set to false
+ settings.useTxRxPinsForTerminal = false; // set to false by Nathan to do external synchronisation test using Rx pin as drumbeat line
  settings.timestampSerial = true;
 //  settings.enableLowBatteryDetection = true;
 //  settings.lowBatteryThreshold = 3.4;
@@ -2203,7 +2203,7 @@ void setup() {
 
   SPI.begin(); //Needed if SD is disabled
 
-  configureSerial1TxRx(); // Configure Serial1
+  // configureSerial1TxRx(); // Configure Serial1 // Commented out by Nathan to do external synchronisation test using Rx pin as drumbeat line
 
   Serial.begin(115200); //Default for initial debug messages if necessary
 
@@ -2236,10 +2236,10 @@ void setup() {
   stopLoggingSeen = false; // Make sure the flag is clear
 
   // Commented out by nathan to allow pins 12 and 13 to but used as UART pins
-  // // Modified by Sami -- set pin 12 to output and low
-  // pinMode(BREAKOUT_PIN_TX, OUTPUT);
-  // digitalWrite(BREAKOUT_PIN_TX, LOW);
-  // // end of modification
+  // Modified by Sami -- set pin 12 to output and low
+  pinMode(BREAKOUT_PIN_TX, OUTPUT);
+  digitalWrite(BREAKOUT_PIN_TX, LOW);
+  // end of modification
  
   analogReadResolution(14); //Increase from default of 10
 
@@ -2274,7 +2274,7 @@ void loop() {
 
     // Commented out by Nathan
     // added by Sami -- set pin 12 to toggle between low and high
-    // digitalWrite(BREAKOUT_PIN_TX, HIGH);
+    digitalWrite(BREAKOUT_PIN_TX, HIGH);
     extTimerValue2 = am_hal_stimer_counter_get();// added by Sami
     timerIntFlag = false; // Reset sampling timer flag
     myRTC.getTime(); // Get the local time from the RTC
@@ -2283,9 +2283,10 @@ void loop() {
     // Must use the new version of 'getData' | Nathan
     // getData(); // Get data from IMU and global time from Coordinator 
     getData(sdOutputData, sizeof(sdOutputData)); //Query all enabled sensors for data
+    Serial.println(3000000 / period); // Nathan
    
     // Serial.println(sdOutputData); // Added in | Nathan
-    SerialPrintf1(sdOutputData); // Added in | Nathan
+    // SerialPrintf1(sdOutputData); // Added in | Nathan // Commented out to do synchronisation test
     
     // Serial1.print(sdOutputData); // Added in | Nathan
     // SerialPrintln(F("Please ensure the SD card is formatted correctly using https://www.sdcard.org/downloads/formatter/"));
@@ -2300,7 +2301,7 @@ void loop() {
       waitToLog(); // Wait until directed to start logging again
     } 
     // added by Sami -- set pin 12 to toggle between low and high
-    // digitalWrite(BREAKOUT_PIN_TX, LOW); 
+    digitalWrite(BREAKOUT_PIN_TX, LOW); 
     // end of modification
     samplingPeriod = am_hal_stimer_counter_get() - extTimerValue2; // added by Sami
   }  
