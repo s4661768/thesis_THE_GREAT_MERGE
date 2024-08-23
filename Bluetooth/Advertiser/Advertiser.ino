@@ -57,9 +57,20 @@ void loop() {
 
     while (central.connected()) {
       if (wmoreRecvDataCharacteristic.written()) {
-        int new_num = wmoreRecvDataCharacteristic.value();
-        wmoreSendDataCharacteristic.writeValue(new_num);
-        Serial.printf("Recved: %d\r\n", new_num);
+        int num = wmoreRecvDataCharacteristic.value();
+        
+        Serial.printf("Recved: %d\r\n", num);
+
+        if (num == 1) {
+          int i = 0;
+          while (!wmoreRecvDataCharacteristic.written()) {
+            wmoreSendDataCharacteristic.writeValue(i);
+            Serial.printf("Sending: %d\r\n", i);
+            delay(1000);
+            i++;
+          }
+        }
+
         delay(10);
       }
     }
