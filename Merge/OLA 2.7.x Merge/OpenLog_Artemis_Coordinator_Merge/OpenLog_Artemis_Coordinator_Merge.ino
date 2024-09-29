@@ -163,7 +163,7 @@
 // WMORE defines
 
 // WMORE version number, which is different to the Openlog Artemis version number it's based on
-#define WMORE_VERSION "WMORE Logger v0.1" 
+#define WMORE_VERSION "WMORE Coordinator v0.1" 
 
 // WMORE defines for synchronised sampling clock
 #define TIMERB_PERIOD 65535U // Free-running timer period
@@ -179,9 +179,9 @@
 //#define TIMER_CLOCK AM_HAL_CTIMER_XT_32_768KHZ
 //#define TIMER_CLOCK AM_HAL_CTIMER_HFRC_187_5KHZ
 #define TIMER_CLOCK AM_HAL_CTIMER_HFRC_3MHZ
-#define RTC_UPDATE_INTERVAL_MINS 1U
 #define LEDS_WAIT 0U // LEDS indicate waiting to start logging
 #define LEDS_LOG 1U // LEDS indicate logging 
+#define POWER_DOWN_WAIT_MS 1000U // Milliseconds to wait before powering down
 
 //----------------------------------------------------------------------------
 // WMORE timestamp structure
@@ -428,13 +428,13 @@ Apollo3RTC myRTC; //Create instance of RTC class
 
 //UART SerialLog(BREAKOUT_PIN_TX, BREAKOUT_PIN_RX);  // Declares a Uart object called SerialLog with TX on pin 12 and RX on pin 13
 
-uint64_t lastSeriaLogSyncTime = 0;
+// uint64_t lastSeriaLogSyncTime = 0;
 uint64_t lastAwakeTimeMillis;
 const int MAX_IDLE_TIME_MSEC = 500;
-bool newSerialData = false;
-char incomingBuffer[256 * 2]; //This size of this buffer is sensitive. Do not change without analysis using OpenLog_Serial.
-int incomingBufferSpot = 0;
-int charsReceived = 0; //Used for verifying/debugging serial reception
+// bool newSerialData = false;
+// char incomingBuffer[256 * 2]; //This size of this buffer is sensitive. Do not change without analysis using OpenLog_Serial.
+// int incomingBufferSpot = 0;
+// int charsReceived = 0; //Used for verifying/debugging serial reception
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 //Add ICM IMU interface
@@ -521,6 +521,8 @@ volatile uint32_t periodSum = period * PERIOD_AVG_BUFFER_SIZE; // initialise run
 #define SerialPrintf4( var1, var2, var3, var4 ) {Serial.printf( var1, var2, var3, var4 ); if (settings.useTxRxPinsForTerminal == true) Serial1.printf( var1, var2, var3, var4 );}
 #define SerialPrintf5( var1, var2, var3, var4, var5 ) {Serial.printf( var1, var2, var3, var4, var5 ); if (settings.useTxRxPinsForTerminal == true) Serial1.printf( var1, var2, var3, var4, var5 );}
 
+
+// uint8_t getByteChoice(int numberOfSeconds, bool updateDZSERIAL = false); // Header
 // The Serial port for the Zmodem connection
 // must not be the same as DSERIAL unless all
 // debugging output to DSERIAL is removed
@@ -530,7 +532,7 @@ Stream *ZSERIAL;
 Stream *DSERIAL;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#include "WDT.h" // WDT support
+#include "WDT.h" // WDT support  
 
 volatile static bool petTheDog = true; // Flag to control whether the WDT ISR pets (resets) the timer.
 
@@ -785,16 +787,25 @@ extern "C" void triggerPinISR() {
   // Process external sync interrupt and calculate adjustment
   // Get interrupt flags
   uint64_t gpio_int_mask = 0x00;
+  
   am_hal_gpio_interrupt_status_get(true, &gpio_int_mask);
-  // read the current internal timer (sampling timer) value
-  intTimerValue = am_hal_ctimer_read(sampleTimer, AM_HAL_CTIMER_TIMERA);
-  // read the current external event timer (sync timer) value
-  extTimerValue = am_hal_stimer_counter_get(); // Now using STIMER instead of timer 3 
   am_hal_gpio_interrupt_clear(AM_HAL_GPIO_BIT(gpio_int_mask)); // clear GPIO interrupt
-  adjustTime(); // Adjust the sampling timer
-  // store previous timer value
-  extTimerValueLast = extTimerValue;   
-  //triggerPinFlag = true; // Currently used for debugging 
+  triggerPinFlag = true;
+
+//   // Process external sync interrupt and calculate adjustment
+//   // Get interrupt flags
+//   uint64_t gpio_int_mask = 0x00;
+//   am_hal_gpio_interrupt_status_get(true, &gpio_int_mask);
+//   // read the current internal timer (sampling timer) value
+//   intTimerValue = am_hal_ctimer_read(sampleTimer, AM_HAL_CTIMER_TIMERA);
+
+//   // read the current external event timer (sync timer) value
+//   extTimerValue = am_hal_stimer_counter_get(); // Now using STIMER instead of timer 3 
+//   am_hal_gpio_interrupt_clear(AM_HAL_GPIO_BIT(gpio_int_mask)); // clear GPIO interrupt
+//   adjustTime(); // Adjust the sampling timer
+//   // store previous timer value
+//   extTimerValueLast = extTimerValue;   
+//   //triggerPinFlag = true; // Currently used for debugging 
 }
 
 //----------------------------------------------------------------------------
@@ -913,13 +924,24 @@ void setupSync(void) {
   pin_config(PinName(PIN_TRIGGER), intPinConfig); // Make sure the pull-up does actually stay enabled
   //triggerPinFlag = false; // Make sure the flag is clear
 
-  // Setup sample interval timer
-  setupSampleTimer(sampleTimer, period); // timerNum, period, padNum
-  am_hal_ctimer_start(sampleTimer, AM_HAL_CTIMER_TIMERA);
-  NVIC_EnableIRQ(CTIMER_IRQn);
-  am_hal_ctimer_int_clear(AM_HAL_CTIMER_INT_TIMERA2);
-  am_hal_ctimer_int_enable(AM_HAL_CTIMER_INT_TIMERA2);  
-  am_hal_ctimer_int_register(AM_HAL_CTIMER_INT_TIMERA2, timerISR);
+// Commented out by Nathan
+  // // Setup sample interval timer
+  // setupSampleTimer(sampleTimer, period); // timerNum, period, padNum
+  // am_hal_ctimer_start(sampleTimer, AM_HAL_CTIMER_TIMERA);
+  // NVIC_EnableIRQ(CTIMER_IRQn);
+  // am_hal_ctimer_int_clear(AM_HAL_CTIMER_INT_TIMERA2);
+  // am_hal_ctimer_int_enable(AM_HAL_CTIMER_INT_TIMERA2);  
+  // am_hal_ctimer_int_register(AM_HAL_CTIMER_INT_TIMERA2, timerISR);
+
+  // Sample timer disabled for RTC coordinator
+//  // Timer A: sets sampling interval
+//  setupSampleTimer(sampleTimer, period); // timerNum, period, padNum
+//  am_hal_ctimer_start(sampleTimer, AM_HAL_CTIMER_TIMERA);
+//  // Set up timer A interrupts
+//  NVIC_EnableIRQ(CTIMER_IRQn);
+//  am_hal_ctimer_int_clear(AM_HAL_CTIMER_INT_TIMERA2);
+//  am_hal_ctimer_int_enable(AM_HAL_CTIMER_INT_TIMERA2);  
+//  am_hal_ctimer_int_register(AM_HAL_CTIMER_INT_TIMERA2, timerISR);
   am_hal_interrupt_master_enable();
 
 }
@@ -1780,7 +1802,9 @@ void beginDataLogging()
   {
     //If we don't have a file yet, create one. Otherwise, re-open the last used file
     if (strlen(sensorDataFileName) == 0)
-      strcpy(sensorDataFileName, findNextAvailableLog(settings.nextDataLogNumber, "dataLog"));
+      // strcpy(sensorDataFileName, findNextAvailableLog(settings.nextDataLogNumber, "dataLog")); // Original coordinator has this commented
+      strcpy(sensorDataFileName, generateFileName()); // Orginally coordinator uses this line
+
 
     // O_CREAT - create the file if it does not exist
     // O_APPEND - seek to the end of the file prior to each write
@@ -1995,25 +2019,23 @@ void overrideSettings(void) {
   settings.usBetweenReadings = 10000;
   settings.logMaxRate = 0;
   settings.enableRTC = 1; // Alternative implementation
-  settings.enableIMU = 1; 
+  settings.enableIMU = 0; 
   settings.enableTerminalOutput = 0;
   settings.logDate = 1; // Alternative implementation
   settings.logTime = 1; // Alternative implementation
   settings.logData = 1;
   settings.logSerial = 0;
-  settings.logIMUAccel = 1; // Alternative implementation
-  settings.logIMUGyro = 1; // Alternative implementation
-  settings.logIMUMag = 1; // Alternative implementation
-  settings.logIMUTemp = 1; // Alternative implementation
+  settings.logIMUAccel = 0; // Alternative implementation
+  settings.logIMUGyro = 0; // Alternative implementation
+  settings.logIMUMag = 0; // Alternative implementation
+  settings.logIMUTemp = 0; // Alternative implementation
   settings.logRTC = 1; // Alternative implementation
   settings.logHertz = 0; // Alternative implementation
   settings.correctForDST = 0;
   settings.dateStyle = 1; // dd/mm/yy
   settings.hour24Style = 1; // 24 hour
 //settings.serialTerminalBaudRate = 115200; // User set
-  // Changing this setting to 115200 | Nathan
-  // settings.serialLogBaudRate = 9600; // Disabled 
-  settings.serialLogBaudRate = 115200; // Disabled 
+  settings.serialLogBaudRate = 9600; // Disabled 
   settings.showHelperText = 0; // Disabled
   settings.logA11 = 0; // Disabled
   settings.logA12 = 0; // Disabled
@@ -2026,19 +2048,19 @@ void overrideSettings(void) {
   settings.qwiicBusMaxSpeed = 100000; // Disabled
   settings.qwiicBusPowerUpDelayMs = 250; // Disabled
   settings.printMeasurementCount = 0; // Disabled
-  settings.enablePwrLedDuringSleep = 0; // Enabled
+  settings.enablePwrLedDuringSleep = 0; // Disabled for Coordinator
   settings.logVIN = 0; // Disabled
 //settings.openNewLogFilesAfter = 0; // User set
-//settings.vinCorrectionFactor = 1.47; // User set
+  settings.vinCorrectionFactor = 1.47; // 
   settings.useGPIO32ForStopLogging = 1;
   settings.qwiicBusPullUps = 1; // Disabled
   settings.outputSerial = 0; // Disabled
 //settings.zmodemStartDelay = 20; // User set
-  settings.enableLowBatteryDetection = 1; // User set 
-  settings.lowBatteryThreshold = 3.40; // User set
+//settings.enableLowBatteryDetection = 0; // User set
+//settings.lowBatteryThreshold = 3.40; // User set
   settings.frequentFileAccessTimestamps = 0; // Disabled
-  settings.useGPIO11ForTrigger = 0; // GPIO11 used for synchronisation instead
-  settings.fallingEdgeTrigger = 1; // Falling edge synchronisation
+  settings.useGPIO11ForTrigger = 0; // Disabled
+  settings.fallingEdgeTrigger = 1; // Disabled
 //settings.imuAccDLPF = 1; // User set
 //settings.imuGyroDLPF = 1; // User set
 //settings.imuAccFSS = 1; // User set
@@ -2067,13 +2089,6 @@ void overrideSettings(void) {
   settings.serialTxRxDuringSleep = 0; // Disabled
   settings.printGNSSDebugMessages = 0; // Disabled
 //settings.serialNumber = 0; // User set
-
- //------------------- Nathan
- settings.useGPIO11ForTrigger = false; // Drumbeat line os must be set to false
- settings.useTxRxPinsForTerminal = false; // set to false by Nathan to do external synchronisation test using Rx pin as drumbeat line
- settings.timestampSerial = true;
-//  settings.enableLowBatteryDetection = true;
-//  settings.lowBatteryThreshold = 3.4;
 }
 
 //----------------------------------------------------------------------------
@@ -2203,13 +2218,10 @@ void setup() {
 
   SPI.begin(); //Needed if SD is disabled
 
-  // configureSerial1TxRx(); // Configure Serial1 // Commented out by Nathan to do external synchronisation test using Rx pin as drumbeat line
+    configureSerial1TxRx();
 
   Serial.begin(115200); //Default for initial debug messages if necessary
-
-  // Changing the baud rate of Serial1 to be 115200 | Nathan
-  // Serial1.begin(460800); // Set up to transmit/receive global timestamps
-  Serial1.begin(115200);
+  Serial1.begin(460800); // Set up to transmit/receive global timestamps
 
   EEPROM.init();
 
@@ -2237,8 +2249,8 @@ void setup() {
 
   // Commented out by nathan to allow pins 12 and 13 to but used as UART pins
   // Modified by Sami -- set pin 12 to output and low
-  pinMode(BREAKOUT_PIN_TX, OUTPUT);
-  digitalWrite(BREAKOUT_PIN_TX, LOW);
+  // pinMode(BREAKOUT_PIN_TX, OUTPUT);
+  // digitalWrite(BREAKOUT_PIN_TX, LOW);
   // end of modification
  
   analogReadResolution(14); //Increase from default of 10
@@ -2246,16 +2258,16 @@ void setup() {
   beginDataLogging(); //180ms
   lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
 
-  beginIMU(); //61ms
+  // beginIMU(); //61ms
 
-  if (online.microSD == true) SerialPrintln(F("SD card online"));
-  else SerialPrintln(F("SD card offline"));
+  // if (online.microSD == true) SerialPrintln(F("SD card online"));
+  // else SerialPrintln(F("SD card offline"));
 
-  if (online.dataLogging == true) SerialPrintln(F("Data logging online"));
-  else SerialPrintln(F("Datalogging offline"));
+  // if (online.dataLogging == true) SerialPrintln(F("Data logging online"));
+  // else SerialPrintln(F("Datalogging offline"));
 
-  if (online.IMU == true) SerialPrintln(F("IMU online"));
-  else SerialPrintln(F("IMU offline - or not present"));
+  // if (online.IMU == true) SerialPrintln(F("IMU online"));
+  // else SerialPrintln(F("IMU offline - or not present"));
 
   digitalWrite(PIN_STAT_LED, LOW); // Turn the blue LED off
 
@@ -2270,53 +2282,27 @@ void setup() {
 
 void loop() {
 
-  if (timerIntFlag == true) { // Act if sampling timer has interrupted
+  // Sampling driven by timer
+  //while (timerIntFlag != true) {}; // Wait for sampling timer
 
-    // Commented out by Nathan
-    // added by Sami -- set pin 12 to toggle between low and high
-    digitalWrite(BREAKOUT_PIN_TX, HIGH);
-    extTimerValue2 = am_hal_stimer_counter_get();// added by Sami
-    timerIntFlag = false; // Reset sampling timer flag
-    myRTC.getTime(); // Get the local time from the RTC
-    lastSamplingPeriod = samplingPeriod; // added by Sami // the previous sampling period to write to SD card
-    
-    // Must use the new version of 'getData' | Nathan
-    // getData(); // Get data from IMU and global time from Coordinator 
-    getData(sdOutputData, sizeof(sdOutputData)); //Query all enabled sensors for data
-    Serial.println(3000000 / period); // Nathan
-   
-    // Serial.println(sdOutputData); // Added in | Nathan
-    // SerialPrintf1(sdOutputData); // Added in | Nathan // Commented out to do synchronisation test
-    
-    // Serial1.print(sdOutputData); // Added in | Nathan
-    // SerialPrintln(F("Please ensure the SD card is formatted correctly using https://www.sdcard.org/downloads/formatter/"));
-
-    
-    writeSDBin(); // Store IMU and time data     
-    if (stopLoggingSeen == true) { // Stop logging if directed by Coordinator
+  if (triggerPinFlag == true) {
+    triggerPinFlag = false;
+    digitalWrite(PIN_STAT_LED, HIGH); // Turn on blue LED
+    myRTC.getTime(); // Get the time from the RTC
+    sendRTC(); // Send the RTC value to the ESB transmitter (Coordinator use only) 
+    digitalWrite(PIN_STAT_LED, LOW); // Turn off blue LED
+    if (stopLoggingSeen == true) {
       stopLoggingSeen = false; // Reset the flag
-      resetArtemis(); // Reset the system
-      stopLoggingStayAwake(); // Close file and prepare for next start command
-      beginDataLogging(); // Open file in preparation for next logging run
-      waitToLog(); // Wait until directed to start logging again
+      waitToLog();
+      //delay(POWER_DOWN_WAIT_MS); // Give the Nano time to transmit the stop command
+      //powerDownOLA(); // Enter low power sleep; cycle power to reset
     } 
-    // added by Sami -- set pin 12 to toggle between low and high
-    digitalWrite(BREAKOUT_PIN_TX, LOW); 
-    // end of modification
-    samplingPeriod = am_hal_stimer_counter_get() - extTimerValue2; // added by Sami
-  }  
+  }
 
   if (Serial.available()) {
     menuMain(); //Present user menu if serial character received
   }  
-  
-  checkBattery(); // Check for low battery and shutdown if low
-  
-  // Debug: output time difference for performance evaluation
-  //if (triggerPinFlag == true) {
-  //  triggerPinFlag = false;
-  //  Serial.println(timeDifference);
-  //}
+  checkBattery(); // Check for low battery
 
 }
 
