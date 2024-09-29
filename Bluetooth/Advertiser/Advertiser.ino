@@ -1,19 +1,36 @@
 #include <ArduinoBLE.h>
 
 
+/* String serice UUID */
+const char* stringServiceUuid = "18ee1516-016b-4bec-ad96-bcb96d166e98";
+/* String Characteristics */
+const char* strSendCharacteristiceUuid = "18ee1516-016b-4bec-ad96-bcb96d166e9c";
+const char* strRecvCharacteristiceUuid = "18ee1516-016b-4bec-ad96-bcb96d166e9d";
+
 const char* wmoreServiceUuid = "18ee1516-016b-4bec-ad96-bcb96d166e99";
 const char* wmoreDataSendCharacteristiceUuid = "18ee1516-016b-4bec-ad96-bcb96d166e9a";
 const char* wmoreDataRecvCharacteristiceUuid = "18ee1516-016b-4bec-ad96-bcb96d166e9b";
+
+
 
 BLEService wmoreStreamingService(wmoreServiceUuid);
 BLEIntCharacteristic wmoreSendDataCharacteristic(wmoreDataSendCharacteristiceUuid, BLERead | BLEBroadcast);
 BLEIntCharacteristic wmoreRecvDataCharacteristic(wmoreDataRecvCharacteristiceUuid, BLEWrite | BLEBroadcast);
 
+BLEService myStringService(stringServiceUuid);
+BLEStringCharacteristic strSendCharacteristic(strSendCharacteristiceUuid, BLERead | BLEBroadcast, 50);
+BLEStringCharacteristic strRecvCharacteristic(strSendCharacteristiceUuid, BLEWrite | BLEBroadcast, 50);
+
+// BLEStringCharacteristic wmoreStrSendDataCharacteristic(wmoreDataStrSendCharacteristiceUuid, BLERead | BLEBroadcast);
+// BLEStringCharacteristic wmoreStrRecvDataCharacteristic(wmoreDataStrRecvCharacteristiceUuid, BLEWrite | BLEBroadcast);
+
 // Advertising parameters should have a global scope. Do NOT define them in 'setup' or in 'loop'
 const uint8_t completeRawAdvertisingData[] = {0x02,0x01,0x06,0x09,0xff,0x01,0x01,0x00,0x01,0x02,0x03,0x04,0x05};   
 
+
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   while (!Serial);
 
   if (!BLE.begin()) {
@@ -24,9 +41,16 @@ void setup() {
   BLE.setAdvertisedService(wmoreStreamingService);
   wmoreStreamingService.addCharacteristic(wmoreSendDataCharacteristic);
   wmoreStreamingService.addCharacteristic(wmoreRecvDataCharacteristic);
+
+  BLE.setAdvertisedService(myStringService);
+  wmoreStreamingService.addCharacteristic(strSendCharacteristic);
+  wmoreStreamingService.addCharacteristic(strRecvCharacteristic);
+
   BLE.addService(wmoreStreamingService);
+  BLE.addService(myStringService);
 
   wmoreSendDataCharacteristic.writeValue(1);
+  strSendCharacteristic.writeValue("Hello\r\n");
 
   // Build advertising data packet
   BLEAdvertisingData advData;
@@ -37,7 +61,7 @@ void setup() {
 
   // Build scan response data packet
   BLEAdvertisingData scanData;
-  scanData.setLocalName("WMORE Test scanData");
+  scanData.setLocalName("WMORE Test scanData Dev0");
   // Copy set parameters in the actual scan response packet
   BLE.setScanResponseData(scanData);
   
@@ -60,10 +84,16 @@ void loop() {
         int num = wmoreRecvDataCharacteristic.value();
         
         Serial.printf("Recved: %d\r\n", num);
+        num += 1;
+        Serial.printf("Sending: %d\r\n", num);
+        
+        wmoreSendDataCharacteristic.writeValue(num);
+        Serial.printf("Sent!");
 
         if (num == 1) {
           int i = 0;
           while (!wmoreRecvDataCharacteristic.written()) {
+          // while (i < 10) {
             wmoreSendDataCharacteristic.writeValue(i);
             Serial.printf("Sending: %d\r\n", i);
             delay(1000);
@@ -71,7 +101,16 @@ void loop() {
           }
         }
 
+
         delay(10);
+      }
+
+      if (strRecvCharacteristic.written()) {
+        Serial.print("Recved Message. Sending it back to Central\r\n");
+        // char* recvStr = (uint8_t*) (strRecvCharacteristic.value());
+        String recvStr = strRecvCharacteristic.value();
+        strSendCharacteristic.writeValue(recvStr);
+        // Serial.printf("Recieved Message: %s", (char*) recvStr);
       }
     }
   }
