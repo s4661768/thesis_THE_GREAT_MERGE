@@ -184,7 +184,7 @@
 #define LEDS_LOG 1U // LEDS indicate logging 
 
 // WMORE defines for BlueTooth Streaming
-#define STRING_SIZE 512
+#define STRING_SIZE 42
 //----------------------------------------------------------------------------
 // WMORE timestamp structure
 
@@ -2018,10 +2018,10 @@ void overrideSettings(void) {
   settings.logTime = 1; // Alternative implementation
   settings.logData = 1;
   settings.logSerial = 0;
-  settings.logIMUAccel = 1; // Alternative implementation
+  settings.logIMUAccel = 0; // Alternative implementation
   settings.logIMUGyro = 1; // Alternative implementation
-  settings.logIMUMag = 1; // Alternative implementation
-  settings.logIMUTemp = 1; // Alternative implementation
+  settings.logIMUMag = 0; // Alternative implementation
+  settings.logIMUTemp = 0; // Alternative implementation
   settings.logRTC = 1; // Alternative implementation
   settings.logHertz = 0; // Alternative implementation
   settings.correctForDST = 0;
@@ -2281,7 +2281,7 @@ void setup() {
   
 
   // Nathan: We are waiting here until PIN_TRIGGER is low. Once that happens we enter the main loop
-  waitToLog(); // Wait for sync falling edge to start logging
+  // waitToLog(); // Wait for sync falling edge to start logging
 
 }
 
@@ -2324,9 +2324,9 @@ void loop() {
       //   online.bluetooth = true;
       // }
 
-      if ((c.connected()) && (counter % 10 == 0)) {
+      if ((c.connected()) && (counter % 4 == 0)) {
           // Serial.println("Sending BT Data");
-        Serial.println("S");
+        // Serial.println("S");
         wmoreStreamingChar.writeValue(sdOutputData);  
       }
 
