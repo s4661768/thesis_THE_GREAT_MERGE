@@ -35,3 +35,7 @@
 # My ignore file
 __pycache__
 *.pyc
+*.csv
+*.txt
+.conda
+.venv
