@@ -7,9 +7,9 @@ def parser(string) -> tuple:
 
 
 def parse_time(string) -> str:
-    date_s, time_s = string.split(',')[0:2]
+    _, time_s = string.split(',')[0:2]
     # print(f"Date: {date_s} | Time: {time_s}")
-    return date_s + " " + time_s
+    return time_s
 
 
 if __name__ == "__main__":
