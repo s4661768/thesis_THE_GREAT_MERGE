@@ -2001,10 +2001,10 @@ void overrideSettings(void) {
   settings.logTime = 1; // Alternative implementation
   settings.logData = 1;
   settings.logSerial = 0;
-  settings.logIMUAccel = 0; // Alternative implementation
-  settings.logIMUGyro = 0; // Alternative implementation
-  settings.logIMUMag = 0; // Alternative implementation
-  settings.logIMUTemp = 0; // Alternative implementation
+  settings.logIMUAccel = 1; // Alternative implementation
+  settings.logIMUGyro = 1; // Alternative implementation
+  settings.logIMUMag = 1; // Alternative implementation
+  settings.logIMUTemp = 1; // Alternative implementation
   settings.logRTC = 1; // Alternative implementation
   settings.logHertz = 0; // Alternative implementation
   settings.correctForDST = 0;
@@ -2208,8 +2208,7 @@ void setup() {
   Serial.begin(115200); //Default for initial debug messages if necessary
 
   // Changing the baud rate of Serial1 to be 115200 | Nathan
-  // Serial1.begin(460800); // Set up to transmit/receive global timestamps
-  Serial1.begin(115200);
+  Serial1.begin(460800); // Set up to transmit/receive global timestamps
 
   EEPROM.init();
 
@@ -2235,7 +2234,7 @@ void setup() {
   pin_config(PinName(PIN_STOP_LOGGING), intPinConfig); // Make sure the pull-up does actually stay enabled
   stopLoggingSeen = false; // Make sure the flag is clear
 
-  // Commented out by nathan to allow pins 12 and 13 to but used as UART pins
+
   // Modified by Sami -- set pin 12 to output and low
   // pinMode(BREAKOUT_PIN_TX, OUTPUT);
   // digitalWrite(BREAKOUT_PIN_TX, LOW);

@@ -2019,16 +2019,16 @@ void overrideSettings(void) {
   settings.usBetweenReadings = 10000;
   settings.logMaxRate = 0;
   settings.enableRTC = 1; // Alternative implementation
-  settings.enableIMU = 0; 
+  settings.enableIMU = 1; 
   settings.enableTerminalOutput = 0;
   settings.logDate = 1; // Alternative implementation
   settings.logTime = 1; // Alternative implementation
   settings.logData = 1;
   settings.logSerial = 0;
-  settings.logIMUAccel = 0; // Alternative implementation
-  settings.logIMUGyro = 0; // Alternative implementation
-  settings.logIMUMag = 0; // Alternative implementation
-  settings.logIMUTemp = 0; // Alternative implementation
+  settings.logIMUAccel = 1; // Alternative implementation
+  settings.logIMUGyro = 1; // Alternative implementation
+  settings.logIMUMag = 1; // Alternative implementation
+  settings.logIMUTemp = 1; // Alternative implementation
   settings.logRTC = 1; // Alternative implementation
   settings.logHertz = 0; // Alternative implementation
   settings.correctForDST = 0;
@@ -2056,7 +2056,7 @@ void overrideSettings(void) {
   settings.qwiicBusPullUps = 1; // Disabled
   settings.outputSerial = 0; // Disabled
 //settings.zmodemStartDelay = 20; // User set
-//settings.enableLowBatteryDetection = 0; // User set
+  settings.enableLowBatteryDetection = 1; // User set
 //settings.lowBatteryThreshold = 3.40; // User set
   settings.frequentFileAccessTimestamps = 0; // Disabled
   settings.useGPIO11ForTrigger = 0; // Disabled
@@ -2258,16 +2258,16 @@ void setup() {
   beginDataLogging(); //180ms
   lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
 
-  // beginIMU(); //61ms
+  beginIMU(); //61ms
 
-  // if (online.microSD == true) SerialPrintln(F("SD card online"));
-  // else SerialPrintln(F("SD card offline"));
+  if (online.microSD == true) SerialPrintln(F("SD card online"));
+  else SerialPrintln(F("SD card offline"));
 
-  // if (online.dataLogging == true) SerialPrintln(F("Data logging online"));
-  // else SerialPrintln(F("Datalogging offline"));
+  if (online.dataLogging == true) SerialPrintln(F("Data logging online"));
+  else SerialPrintln(F("Datalogging offline"));
 
-  // if (online.IMU == true) SerialPrintln(F("IMU online"));
-  // else SerialPrintln(F("IMU offline - or not present"));
+  if (online.IMU == true) SerialPrintln(F("IMU online"));
+  else SerialPrintln(F("IMU offline - or not present"));
 
   digitalWrite(PIN_STAT_LED, LOW); // Turn the blue LED off
 
@@ -2290,6 +2290,11 @@ void loop() {
     digitalWrite(PIN_STAT_LED, HIGH); // Turn on blue LED
     myRTC.getTime(); // Get the time from the RTC
     sendRTC(); // Send the RTC value to the ESB transmitter (Coordinator use only) 
+
+    getData(sdOutputData, sizeof(sdOutputData)); //Query all enabled sensors for data
+    Serial.println(sdOutputData);
+
+    writeSDBin(); // Added by Nathan
     digitalWrite(PIN_STAT_LED, LOW); // Turn off blue LED
     if (stopLoggingSeen == true) {
       stopLoggingSeen = false; // Reset the flag

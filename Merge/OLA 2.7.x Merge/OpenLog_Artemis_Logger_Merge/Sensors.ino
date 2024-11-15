@@ -212,7 +212,8 @@ void getData(char* sdOutputData, size_t lenData)
     strlcat(sdOutputData, tempData, lenData);
   }
 
-  strlcat(sdOutputData, "\r\n", lenData);
+  strlcat(sdOutputData, "\r\n", lenData); // Commented out by Nathan
+  // strlcat(sdOutputData, "\r\n\n", lenData);  // Modified by Nathan
 
   totalCharactersPrinted += strlen(sdOutputData);
 }
